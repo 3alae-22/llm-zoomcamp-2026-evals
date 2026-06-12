@@ -1,0 +1,16 @@
+[project]
+name = "llm-zoomcamp-2026-evals"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "anthropic>=0.109.1",
+    "instructor>=1.15.1",
+    "jupyter>=1.1.1",
+    "minsearch>=0.1.0",
+    "pandas>=3.0.3",
+    "python-dotenv>=1.2.2",
+    "requests>=2.34.2",
+    "tqdm>=4.68.2",
+]
