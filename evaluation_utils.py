@@ -3,47 +3,56 @@ import time
 from tqdm.auto import tqdm
 from rag_helper import RAGAbase
 
+model_base = "claude-haiku-4-5-20251001"
+
+USD_TO_MAD = 10.0  # 1 USD ≈ 10 MAD (à ajuster selon le taux du jour)
 
 def calc_price(usage):
     input_price_per_million       = 0.25
     output_price_per_million      = 1.25
     cache_write_price_per_million = 0.30
-    cache_read_price_per_million  = 0.03  
+    cache_read_price_per_million  = 0.03
 
     input_cost  = (usage.input_tokens  / 1_000_000) * input_price_per_million
     output_cost = (usage.output_tokens / 1_000_000) * output_price_per_million
 
-    # Cache creation (writes)
     cache_write_tokens = (usage.cache_creation_input_tokens or 0)
     if hasattr(usage, 'cache_creation') and usage.cache_creation:
         cache_write_tokens += (usage.cache_creation.ephemeral_1h_input_tokens or 0)
         cache_write_tokens += (usage.cache_creation.ephemeral_5m_input_tokens or 0)
     cache_write_cost = (cache_write_tokens / 1_000_000) * cache_write_price_per_million
 
-    # Cache read
     cache_read_tokens = (usage.cache_read_input_tokens or 0)
     cache_read_cost   = (cache_read_tokens / 1_000_000) * cache_read_price_per_million
 
     total_cost = input_cost + output_cost + cache_write_cost + cache_read_cost
 
     return {
-        "input_cost":       input_cost,
-        "output_cost":      output_cost,
-        "cache_write_cost": cache_write_cost,
-        "cache_read_cost":  cache_read_cost,
-        "total_cost":       total_cost,
+        "input_cost_usd":       input_cost,
+        "output_cost_usd":      output_cost,
+        "cache_write_cost_usd": cache_write_cost,
+        "cache_read_cost_usd":  cache_read_cost,
+        "total_cost_usd":       total_cost,
+        # En DHS
+        "input_cost_mad":       input_cost       * USD_TO_MAD,
+        "output_cost_mad":      output_cost      * USD_TO_MAD,
+        "cache_write_cost_mad": cache_write_cost * USD_TO_MAD,
+        "cache_read_cost_mad":  cache_read_cost  * USD_TO_MAD,
+        "total_cost_mad":       total_cost       * USD_TO_MAD,
     }
 
 
 def calc_total_price(usages):
-    total_cost = 0.0
+    total_usd = 0.0
     for usage in usages:
         cost = calc_price(usage)
-        total_cost += cost["total_cost"]
-    return total_cost
+        total_usd += cost["total_cost_usd"]
+    return {
+        "total_usd": total_usd,
+        "total_mad": total_usd * USD_TO_MAD,
+    }
 
-
-def llm_structured(client, instructions, user_prompt, output_type, model="claude-haiku-3-20240307"):
+def llm_structured(client, instructions, user_prompt, output_type, model=model_base):
     messages = [
         {"role": "user", "content": user_prompt}
     ]
@@ -63,7 +72,7 @@ def llm_structured_retry(
     instructions,
     user_prompt,
     output_type,
-    model="claude-haiku-3-20240307",
+    model=model_base,
     max_retries=3,
 ):
     for attempt in range(max_retries):
